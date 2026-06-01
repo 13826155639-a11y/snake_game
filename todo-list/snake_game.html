@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>贪吃蛇 - 限时挑战</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#042C53;
+  font-family:'Segoe UI','PingFang SC',sans-serif;
+  min-height:100vh; color:#E6F1FB;
+  display:flex; flex-direction:column; align-items:center;
+}
+
+/* ===== TOP NAV ===== */
+.top-nav {
+  width:100%; max-width:520px;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px 0;
+}
+.nav-title { font-size:20px; font-weight:600; color:#85B7EB; letter-spacing:3px; }
+.nav-tabs { display:flex; gap:6px; }
+.nav-tab {
+  padding:6px 14px; border-radius:20px; font-size:13px; cursor:pointer;
+  border:1.5px solid #185FA5; background:transparent; color:#378ADD;
+  transition:all 0.18s; letter-spacing:1px;
+}
+.nav-tab.active { background:#185FA5; color:#E6F1FB; border-color:#378ADD; }
+.nav-tab:hover:not(.active) { background:rgba(24,95,165,0.3); }
+.nav-wallet {
+  display:flex; gap:8px; align-items:center;
+}
+.wallet-chip {
+  display:flex; align-items:center; gap:4px;
+  padding:4px 10px; border-radius:16px;
+  font-size:13px; font-weight:500; cursor:default;
+  border:1.5px solid;
+}
+.wallet-chip.coin  { border-color:rgba(186,117,23,0.5); background:rgba(186,117,23,0.1); color:#EF9F27; }
+.wallet-chip.gem   { border-color:rgba(123,100,255,0.5); background:rgba(123,100,255,0.1); color:#B89FFF; }
+
+/* ===== PAGES ===== */
+.page { display:none; width:100%; max-width:520px; padding:12px 16px 24px; }
+.page.active { display:block; }
+
+/* ===== GAME PAGE ===== */
+.hud {
+  display:flex; gap:16px; margin-bottom:8px; align-items:center;
+  flex-wrap:wrap; justify-content:center;
+}
+.hud-box { text-align:center; min-width:60px; }
+.hud-label { font-size:10px; color:#378ADD; letter-spacing:1px; text-transform:uppercase; }
+.hud-value { font-size:18px; font-weight:500; color:#85B7EB; }
+.hud-value.danger { color:#F09595; }
+.progress-bar-wrap { width:100%; height:6px; background:#0C447C; border-radius:3px; overflow:hidden; margin-bottom:6px; }
+.progress-bar { height:100%; background:#378ADD; border-radius:3px; transition:width 0.4s,background 0.4s; }
+#gameCanvas {
+  border:2px solid #185FA5; border-radius:8px; background:#0C447C;
+  display:block; width:100%; max-width:420px;
+  box-shadow:0 0 30px rgba(55,138,221,0.15);
+}
+.canvas-wrap { display:flex; justify-content:center; }
+.powerup-strip {
+  width:100%; display:flex; gap:8px; align-items:center;
+  min-height:28px; margin:4px 0; flex-wrap:wrap;
+}
+.powerup-tag {
+  display:flex; align-items:center; gap:5px;
+  padding:3px 9px; border-radius:12px; font-size:11px; font-weight:500; border:1.5px solid;
+}
+.powerup-tag.time   { background:rgba(55,138,221,0.15); border-color:#378ADD; color:#85B7EB; }
+.powerup-tag.speed  { background:rgba(216,90,48,0.15);  border-color:#F0997B; color:#F0997B; }
+.powerup-tag.shield { background:rgba(99,153,34,0.15);  border-color:#97C459; color:#97C459; }
+.powerup-tag.score  { background:rgba(186,117,23,0.15); border-color:#EF9F27; color:#EF9F27; }
+.powerup-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.powerup-tag.time   .powerup-dot { background:#378ADD; }
+.powerup-tag.speed  .powerup-dot { background:#F0997B; }
+.powerup-tag.shield .powerup-dot { background:#97C459; }
+.powerup-tag.score  .powerup-dot { background:#EF9F27; }
+.lvl-progress-wrap { width:100%; height:4px; background:#0C447C; border-radius:2px; overflow:hidden; margin-top:2px; }
+.lvl-progress-bar  { height:100%; background:#EF9F27; border-radius:2px; transition:width 0.4s; }
+.controls { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.ctrl-btn {
+  padding:9px 22px; border-radius:6px; border:1.5px solid #185FA5;
+  background:#0C447C; color:#85B7EB; font-size:13px; cursor:pointer;
+  transition:all 0.18s; letter-spacing:1px;
+}
+.ctrl-btn:hover { background:#185FA5; color:#E6F1FB; }
+.ctrl-btn.primary { background:#185FA5; color:#E6F1FB; border-color:#378ADD; }
+.ctrl-btn.primary:hover { background:#378ADD; }
+.dpad {
+  display:grid; grid-template-columns:repeat(3, 44px);
+  grid-template-rows:repeat(3, 44px); gap:4px; margin:10px auto 0;
+  width:fit-content;
+}
+.dpad-btn {
+  width:44px; height:44px; border-radius:6px; border:1.5px solid #185FA5;
+  background:#0C447C; color:#85B7EB; font-size:18px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 0.15s; user-select:none;
+}
+.dpad-btn:active,.dpad-btn:hover { background:#185FA5; }
+.dpad-btn.empty { border:none; background:transparent; cursor:default; }
+.hint { font-size:11px; color:#378ADD; margin-top:8px; opacity:0.7; text-align:center; }
+
+/* ===== SHOP PAGE ===== */
+.page-title { font-size:22px; font-weight:600; color:#EF9F27; letter-spacing:3px; margin-bottom:4px; }
+.page-sub   { font-size:12px; color:#85B7EB; margin-bottom:16px; letter-spacing:1px; }
+.section-label {
+  font-size:12px; color:#378ADD; letter-spacing:2px; margin:14px 0 8px;
+  padding-bottom:4px; border-bottom:1px solid rgba(24,95,165,0.4);
+}
+.shop-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+.shop-card {
+  background:#0C447C; border:2px solid #185FA5; border-radius:12px;
+  padding:14px 12px; text-align:center; transition:all 0.18s;
+}
+.shop-card:hover { border-color:#EF9F27; transform:translateY(-2px); }
+.shop-card.owned { border-color:#97C459; background:rgba(151,196,89,0.08); }
+.shop-card-icon { font-size:28px; margin-bottom:5px; }
+.shop-card-name { font-size:13px; font-weight:600; color:#E6F1FB; margin-bottom:3px; }
+.shop-card-desc { font-size:10px; color:#85B7EB; margin-bottom:8px; line-height:1.5; }
+.shop-card-cost { display:flex; align-items:center; justify-content:center; gap:4px; font-size:12px; font-weight:500; margin-bottom:5px; color:#EF9F27; }
+.shop-card-owned-badge { font-size:10px; color:#97C459; margin-bottom:5px; }
+.shop-btn {
+  padding:5px 14px; border-radius:14px; border:1.5px solid #EF9F27;
+  background:transparent; color:#EF9F27; font-size:11px; cursor:pointer;
+  transition:all 0.18s; font-weight:500;
+}
+.shop-btn:hover { background:#EF9F27; color:#042C53; }
+.shop-btn:disabled { opacity:0.35; cursor:not-allowed; }
+.shop-btn.has-btn { border-color:#97C459; color:#97C459; }
+.shop-btn.has-btn:hover { background:#97C459; color:#042C53; }
+.inv-row { display:flex; gap:8px; flex-wrap:wrap; }
+.inv-tag {
+  display:flex; align-items:center; gap:5px;
+  padding:4px 10px; border-radius:12px; font-size:12px; font-weight:500; border:1.5px solid;
+}
+.inv-tag.extra-life  { background:rgba(226,75,74,0.1);  border-color:#E24B4A; color:#F09595; }
+.inv-tag.extra-time  { background:rgba(55,138,221,0.1); border-color:#378ADD; color:#85B7EB; }
+.inv-tag.start-shield{ background:rgba(99,153,34,0.1);  border-color:#97C459; color:#97C459; }
+.inv-tag.start-speed { background:rgba(216,90,48,0.1);  border-color:#F0997B; color:#F0997B; }
+.inv-tag.start-score { background:rgba(186,117,23,0.1); border-color:#EF9F27; color:#EF9F27; }
+.inv-tag .inv-dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+/* ===== GACHA PAGE ===== */
+.gacha-banner {
+  background:linear-gradient(135deg,rgba(123,100,255,0.2),rgba(55,138,221,0.15));
+  border:1.5px solid rgba(123,100,255,0.4);
+  border-radius:14px; padding:16px; margin-bottom:16px; text-align:center;
+}
+.gacha-banner-title { font-size:20px; font-weight:600; color:#B89FFF; letter-spacing:3px; margin-bottom:6px; }
+.gacha-banner-desc  { font-size:11px; color:#85B7EB; line-height:1.7; }
+.gacha-cost-row {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;
+}
+.gacha-cost-card {
+  background:#0C447C; border:2px solid #185FA5; border-radius:12px;
+  padding:12px 10px; text-align:center; transition:all 0.15s;
+}
+.gacha-cost-card:hover { border-color:#7B64FF; }
+.gacha-cost-icon { font-size:22px; margin-bottom:4px; }
+.gacha-cost-label { font-size:11px; color:#85B7EB; margin-bottom:6px; line-height:1.4; }
+.gacha-cost-price { font-size:14px; font-weight:600; margin-bottom:8px; }
+.gacha-cost-price.gem  { color:#B89FFF; }
+.gacha-cost-price.coin { color:#EF9F27; }
+.gacha-btn {
+  padding:7px 16px; border-radius:16px; font-size:12px; font-weight:600;
+  cursor:pointer; transition:all 0.18s; border:none; width:100%;
+}
+.gacha-btn.gem-btn  { background:linear-gradient(135deg,#7B64FF,#5B44DF); color:#fff; }
+.gacha-btn.gem-btn:hover  { background:linear-gradient(135deg,#9B84FF,#7B64FF); }
+.gacha-btn.coin-btn { background:linear-gradient(135deg,#EF9F27,#D4820E); color:#042C53; }
+.gacha-btn.coin-btn:hover { background:linear-gradient(135deg,#FFBA47,#EF9F27); }
+.gacha-btn:disabled { opacity:0.35; cursor:not-allowed; }
+.gacha-btn.x10-btn  { margin-top:6px; }
+
+.skin-collection-title { font-size:12px; color:#378ADD; letter-spacing:2px; margin:16px 0 10px; padding-bottom:4px; border-bottom:1px solid rgba(24,95,165,0.4); }
+.skin-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.skin-card {
+  background:#0C447C; border:2px solid #185FA5; border-radius:10px;
+  padding:8px 6px; text-align:center; transition:all 0.18s; position:relative;
+}
+.skin-card.unlocked { border-color:#7B64FF; background:rgba(123,100,255,0.1); }
+.skin-card.equipped { border-color:#B89FFF; box-shadow:0 0 12px rgba(184,159,255,0.3); }
+.skin-card canvas   { display:block; margin:0 auto 5px; width:56px; height:56px; }
+.skin-card-name { font-size:10px; color:#B5D4F4; font-weight:500; }
+.skin-card-rarity {
+  font-size:9px; margin-bottom:4px;
+  font-weight:600; letter-spacing:1px;
+}
+.skin-card-rarity.R  { color:#85B7EB; }
+.skin-card-rarity.SR { color:#EF9F27; }
+.skin-card-rarity.SSR{ color:#B89FFF; }
+.skin-lock-icon { font-size:18px; opacity:0.3; margin-bottom:2px; }
+.skin-equip-btn {
+  margin-top:4px; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:600;
+  cursor:pointer; border:1px solid; transition:all 0.15s;
+}
+.skin-equip-btn.equip   { border-color:#7B64FF; color:#B89FFF; background:transparent; }
+.skin-equip-btn.equip:hover { background:#7B64FF; color:#fff; }
+.skin-equip-btn.equipped{ border-color:#B89FFF; color:#fff; background:#7B64FF; cursor:default; }
+.skin-new-badge {
+  position:absolute; top:-4px; right:-4px;
+  background:#E24B4A; color:#fff; font-size:9px; font-weight:700;
+  padding:1px 5px; border-radius:8px;
+}
+
+/* ===== GACHA RESULT MODAL ===== */
+#gachaModal {
+  position:fixed; inset:0; background:rgba(4,44,83,0.96);
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  z-index:40; padding:20px;
+}
+.gacha-result-box {
+  background:#0C447C; border:2px solid #7B64FF;
+  border-radius:20px; padding:24px 20px; text-align:center; max-width:460px; width:100%;
+}
+.gacha-result-title { font-size:22px; font-weight:600; color:#B89FFF; margin-bottom:16px; letter-spacing:2px; }
+.gacha-result-grid  { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:18px; }
+.gacha-result-item  {
+  background:#0a3660; border:2px solid; border-radius:10px;
+  padding:10px 8px; text-align:center; min-width:76px;
+  animation:gachaIn 0.5s ease-out both;
+}
+.gacha-result-item.R   { border-color:#85B7EB; }
+.gacha-result-item.SR  { border-color:#EF9F27; box-shadow:0 0 8px rgba(239,159,39,0.3); }
+.gacha-result-item.SSR { border-color:#B89FFF; box-shadow:0 0 12px rgba(184,159,255,0.5); }
+.gacha-result-item canvas { display:block; margin:0 auto 4px; }
+.gacha-result-item .gr-name   { font-size:11px; color:#E6F1FB; font-weight:500; }
+.gacha-result-item .gr-rarity { font-size:9px; font-weight:700; letter-spacing:1px; margin-top:2px; }
+.gacha-result-item .gr-rarity.R   { color:#85B7EB; }
+.gacha-result-item .gr-rarity.SR  { color:#EF9F27; }
+.gacha-result-item .gr-rarity.SSR { color:#B89FFF; }
+.gacha-result-item.dup { opacity:0.6; }
+.gacha-result-dup-text { font-size:10px; color:#97C459; margin-top:2px; }
+@keyframes gachaIn {
+  from { opacity:0; transform:scale(0.5) rotate(-10deg); }
+  to   { opacity:1; transform:scale(1) rotate(0); }
+}
+.gacha-close-btn {
+  padding:10px 36px; border-radius:24px; border:2px solid #7B64FF;
+  background:#0C447C; color:#B89FFF; font-size:14px; cursor:pointer; transition:all 0.18s;
+}
+.gacha-close-btn:hover { background:#7B64FF; color:#fff; }
+
+/* ===== OVERLAYS ===== */
+#overlay {
+  position:fixed; inset:0; background:rgba(4,44,83,0.94);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10;
+}
+.overlay-box {
+  background:#0C447C; border:2px solid #185FA5; border-radius:16px;
+  padding:32px 44px; text-align:center; max-width:360px;
+}
+.overlay-title { font-size:28px; font-weight:500; margin-bottom:10px; color:#85B7EB; }
+.overlay-msg { font-size:13px; color:#B5D4F4; margin-bottom:18px; line-height:1.8; }
+.overlay-score { font-size:16px; color:#378ADD; margin-bottom:16px; }
+.win-title  { color:#5DCAA5; }
+.lose-title { color:#F09595; }
+.overlay-btns { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+#charSelectOverlay {
+  position:fixed; inset:0; background:rgba(4,44,83,0.97);
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  z-index:20; overflow-y:auto; padding:20px;
+}
+.char-title    { font-size:24px; font-weight:500; color:#85B7EB; letter-spacing:4px; margin-bottom:4px; }
+.char-subtitle { font-size:12px; color:#378ADD; margin-bottom:18px; letter-spacing:1px; }
+.char-grid     { display:grid; grid-template-columns:repeat(2,140px); gap:12px; margin-bottom:20px; }
+.char-card {
+  background:#0C447C; border:2px solid #185FA5; border-radius:12px;
+  padding:14px 10px; cursor:pointer; transition:all 0.2s; text-align:center;
+}
+.char-card:hover  { border-color:#378ADD; transform:translateY(-2px); }
+.char-card.selected { border-color:#85B7EB; box-shadow:0 0 16px rgba(133,183,235,0.25); }
+.char-preview  { width:70px; height:70px; margin:0 auto 8px; display:block; }
+.char-name     { font-size:14px; font-weight:500; color:#E6F1FB; margin-bottom:3px; letter-spacing:2px; }
+.char-skill    { font-size:10px; color:#EF9F27; margin-bottom:3px; font-weight:500; }
+.char-desc     { font-size:9px; color:#378ADD; line-height:1.5; }
+.char-confirm-btn {
+  padding:11px 44px; border-radius:22px; border:2px solid #378ADD;
+  background:#185FA5; color:#E6F1FB; font-size:14px; cursor:pointer; transition:all 0.2s;
+}
+.char-confirm-btn:hover { background:#378ADD; }
+
+#levelSelectOverlay {
+  position:fixed; inset:0; background:rgba(4,44,83,0.97);
+  display:none; flex-direction:column; align-items:center; justify-content:flex-start;
+  z-index:20; overflow-y:auto; padding:20px;
+}
+.level-title    { font-size:22px; font-weight:500; color:#85B7EB; letter-spacing:4px; margin-bottom:3px; margin-top:10px; }
+.level-subtitle { font-size:12px; color:#378ADD; margin-bottom:4px; letter-spacing:1px; }
+.level-info     { font-size:12px; color:#85B7EB; margin-bottom:14px; }
+.level-grid {
+  display:grid; grid-template-columns:repeat(10,1fr);
+  gap:7px; max-width:580px; width:100%; margin-bottom:18px;
+}
+.level-btn {
+  aspect-ratio:1; border-radius:8px; border:2px solid #185FA5;
+  background:#0C447C; color:#85B7EB; font-size:13px; font-weight:500;
+  cursor:pointer; transition:all 0.18s;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0;
+}
+.level-btn:hover:not(.locked) { border-color:#378ADD; transform:scale(1.08); background:#185FA5; }
+.level-btn.selected { border-color:#85B7EB; background:#185FA5; box-shadow:0 0 8px rgba(133,183,235,0.3); }
+.level-btn.locked   { opacity:0.3; cursor:not-allowed; background:#042C53; }
+.level-btn .lvl-num  { font-size:12px; font-weight:600; color:#E6F1FB; line-height:1; }
+.level-btn .lvl-zone { font-size:8px; color:#378ADD; line-height:1.2; margin-top:2px; }
+.level-start-btn {
+  padding:11px 44px; border-radius:22px; border:2px solid #378ADD;
+  background:#185FA5; color:#E6F1FB; font-size:14px; cursor:pointer; transition:all 0.2s;
+}
+.level-start-btn:hover { background:#378ADD; }
+.back-btn {
+  margin-top:10px; padding:7px 18px; border-radius:18px;
+  border:1.5px solid #185FA5; background:transparent;
+  color:#378ADD; font-size:12px; cursor:pointer; transition:all 0.18s;
+}
+.back-btn:hover { background:#185FA5; color:#E6F1FB; }
+.zone-label { font-size:11px; color:#378ADD; margin-bottom:5px; letter-spacing:2px; text-align:left; width:100%; max-width:580px; }
+.pu-legend { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:14px; max-width:580px; }
+.pu-item   { display:flex; align-items:center; gap:4px; font-size:11px; color:#B5D4F4; }
+.pu-dot    { width:9px; height:9px; border-radius:50%; }
+
+/* ===== FLOAT MSGS & POPS ===== */
+.coin-pop {
+  position:fixed; font-size:20px; font-weight:600;
+  pointer-events:none; z-index:60;
+  animation:popFloat 1.2s ease-out forwards;
+}
+.coin-pop.gem-pop { color:#B89FFF; }
+.coin-pop.coin-pop-c { color:#EF9F27; }
+@keyframes popFloat {
+  0%  { opacity:1; transform:translateY(0) scale(1); }
+  60% { opacity:1; transform:translateY(-50px) scale(1.15); }
+  100%{ opacity:0; transform:translateY(-90px) scale(0.8); }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== TOP NAVIGATION ===== -->
+<div class="top-nav">
+  <div class="nav-title">🐍 贪吃蛇</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchPage('game')">游戏</button>
+    <button class="nav-tab" onclick="switchPage('shop')">商城</button>
+    <button class="nav-tab" onclick="switchPage('gacha')">抽卡</button>
+  </div>
+  <div class="nav-wallet">
+    <div class="wallet-chip coin">🪙 <span id="navCoins">0</span></div>
+    <div class="wallet-chip gem">💎 <span id="navGems">0</span></div>
+  </div>
+</div>
+
+<!-- ===== GAME PAGE ===== -->
+<div class="page active" id="page-game">
+  <div class="hud">
+    <div class="hud-box"><div class="hud-label">关卡</div><div class="hud-value" id="levelVal">1</div></div>
+    <div class="hud-box"><div class="hud-label">得分</div><div class="hud-value" id="scoreVal">0</div></div>
+    <div class="hud-box"><div class="hud-label">剩余时间</div><div class="hud-value" id="timeVal">60</div></div>
+    <div class="hud-box"><div class="hud-label">剩余豆子</div><div class="hud-value" id="foodVal">0</div></div>
+    <div class="hud-box"><div class="hud-label">最高关</div><div class="hud-value" id="bestLevelVal">1</div></div>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar" id="timeBar" style="width:100%"></div></div>
+  <div class="canvas-wrap"><canvas id="gameCanvas" width="420" height="420"></canvas></div>
+  <div class="powerup-strip" id="powerupStrip"></div>
+  <div class="lvl-progress-wrap"><div class="lvl-progress-bar" id="lvlBar" style="width:0%"></div></div>
+  <div class="controls">
+    <button class="ctrl-btn primary" onclick="showCharSelect()">开始游戏</button>
+    <button class="ctrl-btn" onclick="pauseGame()">暂停 / 继续</button>
+    <button class="ctrl-btn" onclick="resetGame()">重置</button>
+  </div>
+  <div class="dpad">
+    <div class="dpad-btn empty"></div>
+    <div class="dpad-btn" onpointerdown="setDir(0,-1)">▲</div>
+    <div class="dpad-btn empty"></div>
+    <div class="dpad-btn" onpointerdown="setDir(-1,0)">◀</div>
+    <div class="dpad-btn empty"></div>
+    <div class="dpad-btn" onpointerdown="setDir(1,0)">▶</div>
+    <div class="dpad-btn empty"></div>
+    <div class="dpad-btn" onpointerdown="setDir(0,1)">▼</div>
+    <div class="dpad-btn empty"></div>
+  </div>
+  <p class="hint">键盘方向键 / WASD · 空格暂停</p>
+</div>
+
+<!-- ===== SHOP PAGE ===== -->
+<div class="page" id="page-shop">
+  <div class="page-title">🎁 道具商城</div>
+  <div class="page-sub">用金币兑换道具，带入下一关使用</div>
+  <div class="shop-grid" id="shopGrid"></div>
+  <div class="section-label">🎒 背包（下关自动生效）</div>
+  <div class="inv-row" id="invGrid"></div>
+</div>
+
+<!-- ===== GACHA PAGE ===== -->
+<div class="page" id="page-gacha">
+  <div class="page-title">✨ 皮肤抽卡</div>
+  <div class="page-sub">用钻石或金币抽取稀有皮肤</div>
+
+  <div class="gacha-banner">
+    <div class="gacha-banner-title">🌟 限定皮肤池</div>
+    <div class="gacha-banner-desc">
+      共 10 款皮肤 · R / SR / SSR 三档稀有度<br>
+      SSR 出现概率 10% · SR 出现概率 25% · 重复皮肤自动转化为 💎 1 颗
+    </div>
+  </div>
+
+  <div class="gacha-cost-row">
+    <div class="gacha-cost-card">
+      <div class="gacha-cost-icon">💎</div>
+      <div class="gacha-cost-label">钻石抽</div>
+      <div class="gacha-cost-price gem">5 💎 / 单抽</div>
+      <button class="gacha-btn gem-btn" onclick="doGacha(1,'gem')" id="gachaBtnGem1">单抽</button>
+      <div class="gacha-cost-price gem" style="margin-top:8px;">40 💎 / 十连</div>
+      <button class="gacha-btn gem-btn x10-btn" onclick="doGacha(10,'gem')" id="gachaBtnGem10">十连抽</button>
+    </div>
+    <div class="gacha-cost-card">
+      <div class="gacha-cost-icon">🪙</div>
+      <div class="gacha-cost-label">金币抽</div>
+      <div class="gacha-cost-price coin">10 🪙 / 单抽</div>
+      <button class="gacha-btn coin-btn" onclick="doGacha(1,'coin')" id="gachaBtnCoin1">单抽</button>
+      <div class="gacha-cost-price coin" style="margin-top:8px;">65 🪙 / 十连</div>
+      <button class="gacha-btn coin-btn x10-btn" onclick="doGacha(10,'coin')" id="gachaBtnCoin10">十连抽</button>
+    </div>
+  </div>
+
+  <div class="skin-collection-title">🎨 皮肤图鉴</div>
+  <div class="skin-grid" id="skinGrid"></div>
+</div>
+
+<!-- ===== GACHA RESULT MODAL ===== -->
+<div id="gachaModal">
+  <div class="gacha-result-box">
+    <div class="gacha-result-title" id="gachaResultTitle">✨ 抽卡结果</div>
+    <div class="gacha-result-grid" id="gachaResultGrid"></div>
+    <button class="gacha-close-btn" onclick="closeGachaModal()">收下！</button>
+  </div>
+</div>
+
+<!-- ===== CHARACTER SELECT ===== -->
+<div id="charSelectOverlay">
+  <div class="char-title">选择主角</div>
+  <div class="char-subtitle">每位主角携带专属道具技能</div>
+  <div class="char-grid" id="charGrid"></div>
+  <button class="char-confirm-btn" onclick="confirmCharacter()">确认选择</button>
+</div>
+
+<!-- ===== LEVEL SELECT ===== -->
+<div id="levelSelectOverlay">
+  <div class="level-title">选择关卡</div>
+  <div class="level-subtitle" id="levelCharLabel"></div>
+  <div class="level-info">共30关，通关后解锁下一关</div>
+  <div class="pu-legend">
+    <div class="pu-item"><div class="pu-dot" style="background:#378ADD"></div>⏱ 加时+15s</div>
+    <div class="pu-item"><div class="pu-dot" style="background:#F0997B"></div>⚡ 急速8s</div>
+    <div class="pu-item"><div class="pu-dot" style="background:#97C459"></div>🛡 护盾6s</div>
+    <div class="pu-item"><div class="pu-dot" style="background:#EF9F27"></div>⭐ 双分8s</div>
+  </div>
+  <div class="zone-label">● 入门（1~10关）</div>
+  <div class="level-grid" id="levelGrid1"></div>
+  <div class="zone-label">● 进阶（11~20关）</div>
+  <div class="level-grid" id="levelGrid2"></div>
+  <div class="zone-label">● 挑战（21~30关）</div>
+  <div class="level-grid" id="levelGrid3"></div>
+  <button class="level-start-btn" onclick="startFromLevelSelect()">开始第 <span id="confirmLevelNum">1</span> 关</button>
+  <button class="back-btn" onclick="goBackToChar()">重新选角色</button>
+</div>
+
+<!-- ===== RESULT OVERLAY ===== -->
+<div id="overlay">
+  <div class="overlay-box">
+    <div class="overlay-title" id="ovTitle">贪吃蛇</div>
+    <div class="overlay-msg" id="ovMsg">
+      共 <b>30</b> 关，难度递增<br>
+      每关可得 🪙 金币 + 💎 钻石奖励
+    </div>
+    <div class="overlay-score" id="ovScore"></div>
+    <div class="overlay-btns">
+      <button class="ctrl-btn primary" onclick="showCharSelect()">开始游戏</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== LEVEL CONFIG ==========
+function getLevelCfg(lvl) {
+  const t = (lvl - 1) / 29;
+  return {
+    speed:     Math.round(200 - t * 125),
+    time:      Math.round(80  - t * 45),
+    food:      Math.round(8   + t * 22),
+    obstacles: Math.round(t * 12),
+    zone: lvl <= 10 ? '入门' : lvl <= 20 ? '进阶' : '挑战'
+  };
+}
+
+// ========== CHARACTERS ==========
+const CHARACTERS = [
+  { id:'blue',  name:'蓝蛇', skill:'⏱ 加时率+50%', headColor:'#85B7EB', bodyColor:'rgba(55,138,221,',  eyeColor:'#042C53', desc:'均衡 · 加时道具更易出现', speed:1.0  },
+  { id:'red',   name:'红蛇', skill:'⚡ 急速率+50%', headColor:'#F0997B', bodyColor:'rgba(216,90,48,',   eyeColor:'#4A1B0C', desc:'激进 · 急速道具更易出现', speed:0.95 },
+  { id:'green', name:'绿蛇', skill:'🛡 护盾率+50%', headColor:'#97C459', bodyColor:'rgba(99,153,34,',   eyeColor:'#173404', desc:'技巧 · 护盾道具更易出现', speed:1.05 },
+  { id:'gold',  name:'金蛇', skill:'⭐ 双分率+50%', headColor:'#EF9F27', bodyColor:'rgba(186,117,23,', eyeColor:'#412402', desc:'幸运 · 双分道具更易出现', speed:1.0  }
+];
+
+// ========== SKINS ==========
+// rarity: R / SR / SSR
+const SKINS = [
+  { id:'default',  name:'经典蓝',  rarity:'R',   headColor:'#85B7EB', bodyColor:'rgba(55,138,221,',  eyeColor:'#042C53', alwaysOwned:true },
+  { id:'crimson',  name:'赤焰',    rarity:'R',   headColor:'#F0997B', bodyColor:'rgba(216,90,48,',   eyeColor:'#4A1B0C', alwaysOwned:false },
+  { id:'forest',   name:'森林',    rarity:'R',   headColor:'#97C459', bodyColor:'rgba(99,153,34,',   eyeColor:'#173404', alwaysOwned:false },
+  { id:'sand',     name:'沙漠',    rarity:'R',   headColor:'#CEAE73', bodyColor:'rgba(160,120,50,',  eyeColor:'#3A2810', alwaysOwned:false },
+  { id:'violet',   name:'紫晶',    rarity:'SR',  headColor:'#C49FFF', bodyColor:'rgba(130,80,230,',  eyeColor:'#200840', alwaysOwned:false },
+  { id:'rose',     name:'玫瑰',    rarity:'SR',  headColor:'#FF9FC0', bodyColor:'rgba(210,60,120,',  eyeColor:'#500020', alwaysOwned:false },
+  { id:'ocean',    name:'深海',    rarity:'SR',  headColor:'#5DCAA5', bodyColor:'rgba(30,140,120,',  eyeColor:'#002820', alwaysOwned:false },
+  { id:'inferno',  name:'炼狱',    rarity:'SSR', headColor:'#FF7C3A', bodyColor:'rgba(200,50,10,',   eyeColor:'#300500', alwaysOwned:false },
+  { id:'galaxy',   name:'星河',    rarity:'SSR', headColor:'#B89FFF', bodyColor:'rgba(100,60,220,',  eyeColor:'#10002A', alwaysOwned:false },
+  { id:'aurora',   name:'极光',    rarity:'SSR', headColor:'#7FFFD4', bodyColor:'rgba(30,180,160,',  eyeColor:'#001A15', alwaysOwned:false },
+];
+
+// Gacha rarity weights
+function getRarityByWeight() {
+  const r = Math.random();
+  if (r < 0.10) return 'SSR';
+  if (r < 0.35) return 'SR';
+  return 'R';
+}
+function pickSkinByRarity(rarity) {
+  const pool = SKINS.filter(s => s.rarity === rarity && !s.alwaysOwned);
+  if (!pool.length) return SKINS.find(s => s.rarity === rarity) || SKINS[0];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// ========== POWERUP DEFS ==========
+const POWERUP_DEFS = {
+  time:   { label:'⏱ 加时',  color:'#378ADD', fill:'rgba(55,138,221,0.25)',  duration:0, desc:'+15秒' },
+  speed:  { label:'⚡ 急速',  color:'#F0997B', fill:'rgba(216,90,48,0.25)',  duration:8, desc:'急速8s' },
+  shield: { label:'🛡 护盾',  color:'#97C459', fill:'rgba(99,153,34,0.25)',  duration:6, desc:'护盾6s' },
+  score:  { label:'⭐ 双分',  color:'#EF9F27', fill:'rgba(186,117,23,0.25)', duration:8, desc:'双分8s' }
+};
+const PU_TYPES = ['time','speed','shield','score'];
+
+// ========== SHOP ITEMS ==========
+const SHOP_ITEMS = [
+  { id:'extra-life',   name:'❤️ 额外生命',  icon:'❤️', desc:'本关获得1次免死机会',  cost:10 },
+  { id:'extra-time',   name:'⏱ 开局时间',  icon:'⏱', desc:'开局额外+15秒时间',    cost:8  },
+  { id:'start-shield', name:'🛡 开局护盾',  icon:'🛡', desc:'开局自带3秒护盾效果',  cost:12 },
+  { id:'start-speed',  name:'⚡ 开局急速',  icon:'⚡', desc:'开局自带5秒急速模式',  cost:10 },
+  { id:'start-score',  name:'⭐ 开局双分',  icon:'⭐', desc:'开局自带8秒双倍得分',  cost:12 },
+];
+
+// ========== PERSISTENCE ==========
+let coins     = parseInt(localStorage.getItem('snake_coins')   || '0');
+let gems      = parseInt(localStorage.getItem('snake_gems')    || '0');
+let inventory = JSON.parse(localStorage.getItem('snake_inventory') || '{}');
+let ownedSkins= JSON.parse(localStorage.getItem('snake_skins') || '["default"]');
+let equippedSkin = localStorage.getItem('snake_equipped') || 'default';
+let newSkins  = JSON.parse(localStorage.getItem('snake_new_skins') || '[]');
+
+function saveAll() {
+  localStorage.setItem('snake_coins', coins);
+  localStorage.setItem('snake_gems',  gems);
+  localStorage.setItem('snake_inventory', JSON.stringify(inventory));
+  localStorage.setItem('snake_skins', JSON.stringify(ownedSkins));
+  localStorage.setItem('snake_equipped', equippedSkin);
+  localStorage.setItem('snake_new_skins', JSON.stringify(newSkins));
+}
+
+// ========== WALLET HUD ==========
+function updateWallet() {
+  document.getElementById('navCoins').textContent = coins;
+  document.getElementById('navGems').textContent  = gems;
+}
+
+// ========== PAGE SWITCHING ==========
+let _pausedByNav = false; // 记录是否由导航触发的自动暂停
+
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  const idx = ['game','shop','gacha'].indexOf(name);
+  if (idx >= 0) tabs[idx].classList.add('active');
+
+  if (name === 'shop' || name === 'gacha') {
+    // 离开游戏页 → 若游戏正在运行且未暂停，则自动暂停
+    if (gameRunning && !gamePaused) {
+      gamePaused = true;
+      _pausedByNav = true;
+    }
+    if (name === 'shop')  renderShop();
+    if (name === 'gacha') { renderSkinGrid(); updateGachaBtns(); }
+  } else if (name === 'game') {
+    // 回到游戏页 → 若是由导航自动暂停的，则自动恢复
+    if (_pausedByNav && gameRunning && gamePaused) {
+      gamePaused = false;
+    }
+    _pausedByNav = false;
+  }
+}
+
+// ========== SHOP ==========
+function renderShop() {
+  const grid = document.getElementById('shopGrid');
+  grid.innerHTML = '';
+  SHOP_ITEMS.forEach(item => {
+    const owned = inventory[item.id] || 0;
+    const canAfford = coins >= item.cost;
+    const card = document.createElement('div');
+    card.className = 'shop-card' + (owned > 0 ? ' owned' : '');
+    card.innerHTML = `
+      <div class="shop-card-icon">${item.icon}</div>
+      <div class="shop-card-name">${item.name}</div>
+      <div class="shop-card-desc">${item.desc}</div>
+      <div class="shop-card-cost">🪙 ${item.cost}</div>
+      ${owned > 0 ? `<div class="shop-card-owned-badge">已拥有 ×${owned}</div>` : ''}
+      <button class="shop-btn${owned > 0 ? ' has-btn' : ''}"
+        ${!canAfford && owned === 0 ? 'disabled' : ''}
+        onclick="buyItem('${item.id}')">
+        ${owned > 0 ? '再买1个' : '购买'}
+      </button>`;
+    grid.appendChild(card);
+  });
+
+  const invGrid = document.getElementById('invGrid');
+  invGrid.innerHTML = '';
+  const hasAny = SHOP_ITEMS.some(i => (inventory[i.id] || 0) > 0);
+  if (!hasAny) {
+    invGrid.innerHTML = '<div style="font-size:12px;color:#378ADD;opacity:0.7;padding:4px 0">背包空空，去买一个吧！</div>';
+    return;
+  }
+  SHOP_ITEMS.forEach(item => {
+    const cnt = inventory[item.id] || 0;
+    if (!cnt) return;
+    const tag = document.createElement('div');
+    tag.className = 'inv-tag ' + item.id;
+    tag.innerHTML = `<div class="inv-dot"></div>${item.icon} ×${cnt}`;
+    invGrid.appendChild(tag);
+  });
+}
+
+function buyItem(itemId) {
+  const item = SHOP_ITEMS.find(i => i.id === itemId);
+  if (!item || coins < item.cost) return;
+  coins -= item.cost;
+  inventory[itemId] = (inventory[itemId] || 0) + 1;
+  saveAll(); updateWallet(); renderShop();
+}
+
+// ========== GACHA ==========
+function updateGachaBtns() {
+  document.getElementById('gachaBtnGem1').disabled  = gems < 5;
+  document.getElementById('gachaBtnGem10').disabled = gems < 40;
+  document.getElementById('gachaBtnCoin1').disabled  = coins < 10;
+  document.getElementById('gachaBtnCoin10').disabled = coins < 65;
+}
+
+function doGacha(count, currency) {
+  const cost1  = currency === 'gem' ? 5  : 10;
+  const cost10 = currency === 'gem' ? 40 : 65;
+  const totalCost = count === 1 ? cost1 : cost10;
+  if (currency === 'gem'  && gems  < totalCost) return;
+  if (currency === 'coin' && coins < totalCost) return;
+
+  if (currency === 'gem')  gems  -= totalCost;
+  else                     coins -= totalCost;
+
+  const results = [];
+  for (let i = 0; i < count; i++) {
+    const rarity = getRarityByWeight();
+    const skin   = pickSkinByRarity(rarity);
+    const isDup  = ownedSkins.includes(skin.id);
+    if (!isDup) {
+      ownedSkins.push(skin.id);
+      newSkins.push(skin.id);
+    } else {
+      // Duplicate → refund 1 gem
+      gems += 1;
+    }
+    results.push({ skin, isDup });
+  }
+
+  saveAll(); updateWallet(); updateGachaBtns(); renderSkinGrid();
+  showGachaResult(results);
+}
+
+function showGachaResult(results) {
+  document.getElementById('gachaResultTitle').textContent =
+    results.length === 1 ? '✨ 抽卡结果' : '✨ 十连结果';
+  const grid = document.getElementById('gachaResultGrid');
+  grid.innerHTML = '';
+  results.forEach((r, idx) => {
+    const item = document.createElement('div');
+    item.className = `gacha-result-item ${r.skin.rarity}${r.isDup ? ' dup' : ''}`;
+    item.style.animationDelay = (idx * 0.08) + 's';
+    const c = makeSkinCanvas(r.skin, 56, 56);
+    item.appendChild(c);
+    item.innerHTML += `
+      <div class="gr-name">${r.skin.name}</div>
+      <div class="gr-rarity ${r.skin.rarity}">${r.skin.rarity}</div>
+      ${r.isDup ? '<div class="gacha-result-dup-text">重复 → +1💎</div>' : ''}`;
+    grid.appendChild(item);
+  });
+  document.getElementById('gachaModal').style.display = 'flex';
+}
+
+function closeGachaModal() {
+  document.getElementById('gachaModal').style.display = 'none';
+}
+
+function renderSkinGrid() {
+  const grid = document.getElementById('skinGrid');
+  grid.innerHTML = '';
+  SKINS.forEach(skin => {
+    const owned    = ownedSkins.includes(skin.id);
+    const equipped = equippedSkin === skin.id;
+    const isNew    = newSkins.includes(skin.id);
+    const card = document.createElement('div');
+    card.className = 'skin-card' + (owned ? ' unlocked' : '') + (equipped ? ' equipped' : '');
+    const c = makeSkinCanvas(skin, 56, 56);
+    if (!owned) c.style.filter = 'grayscale(1) brightness(0.4)';
+    const rarityColors = { R:'#85B7EB', SR:'#EF9F27', SSR:'#B89FFF' };
+    card.innerHTML = `
+      <div class="skin-card-rarity ${skin.rarity}" style="color:${rarityColors[skin.rarity]}">${skin.rarity}</div>`;
+    card.insertBefore(c, card.firstChild);
+    card.innerHTML += `<div class="skin-card-name">${skin.name}</div>`;
+    if (owned) {
+      const btn = document.createElement('button');
+      btn.className = 'skin-equip-btn ' + (equipped ? 'equipped' : 'equip');
+      btn.textContent = equipped ? '已装备' : '装备';
+      if (!equipped) btn.onclick = () => equipSkin(skin.id);
+      card.appendChild(btn);
+    } else {
+      const lock = document.createElement('div');
+      lock.className = 'skin-lock-icon';
+      lock.textContent = '🔒';
+      card.appendChild(lock);
+    }
+    if (isNew && owned) {
+      const badge = document.createElement('div');
+      badge.className = 'skin-new-badge';
+      badge.textContent = 'NEW';
+      card.appendChild(badge);
+    }
+    grid.appendChild(card);
+  });
+  // Clear new badges after viewing
+  if (newSkins.length) {
+    newSkins = [];
+    saveAll();
+  }
+}
+
+function equipSkin(skinId) {
+  equippedSkin = skinId;
+  saveAll();
+  // Update active char colors from skin
+  const skin = SKINS.find(s => s.id === skinId);
+  if (skin) {
+    activeSkin = skin;
+  }
+  renderSkinGrid();
+}
+
+// Make a mini canvas for a skin
+function makeSkinCanvas(skin, w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const cx = c.getContext('2d');
+  const cell = Math.floor(w / 5);
+  const segs = [{x:2,y:1},{x:1,y:1},{x:0,y:1},{x:0,y:2},{x:0,y:3}];
+  segs.forEach((seg, i) => {
+    const isHead = i === 0;
+    cx.fillStyle = isHead ? skin.headColor : skin.bodyColor + Math.max(0.35, 1-i/segs.length*0.65) + ')';
+    cx.beginPath();
+    roundRectPath(cx, seg.x*cell+1, seg.y*cell+1, cell-2, cell-2, 3);
+    cx.fill();
+    if (isHead) {
+      cx.fillStyle = skin.eyeColor;
+      cx.beginPath(); cx.arc(seg.x*cell+cell*0.35, seg.y*cell+cell*0.38, cell*0.12, 0, Math.PI*2); cx.fill();
+      cx.beginPath(); cx.arc(seg.x*cell+cell*0.65, seg.y*cell+cell*0.38, cell*0.12, 0, Math.PI*2); cx.fill();
+    }
+  });
+  return c;
+}
+
+// ========== ACTIVE SKIN ==========
+let activeSkin = SKINS.find(s => s.id === equippedSkin) || SKINS[0];
+
+// ========== GAME STATE ==========
+const TOTAL_LEVELS = 30;
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+const COLS = 20, ROWS = 20;
+
+let selectedCharId = 'blue';
+let selectedChar   = CHARACTERS[0];
+let selectedLevel  = 1;
+let currentLevel   = 1;
+
+let snake, dir, nextDir, foods, obstacles;
+let score, timeLeft, totalFood, gameRunning, gamePaused;
+let gameLoop, timerLoop, effectTimer;
+let bestLevel = 1;
+
+let powerups     = [];
+let activeEffects= {};
+let puSpawnTimer = 0;
+let extraLifeThisGame = false;
+
+// ========== REWARD ==========
+function awardWin(level) {
+  // Coins
+  const base = 10;
+  const tierBonus = Math.floor(level / 5) * 5;
+  const highBonus = level >= 20 ? 10 : level >= 10 ? 5 : 0;
+  const earnedCoins = base + tierBonus + highBonus;
+  coins += earnedCoins;
+
+  // Diamonds: 1~2 per game
+  const earnedGems = 1 + (Math.random() < 0.5 ? 1 : 0);
+  gems += earnedGems;
+
+  saveAll(); updateWallet();
+  showPop(`+${earnedCoins}🪙`, false);
+  setTimeout(() => showPop(`+${earnedGems}💎`, true), 600);
+  return { earnedCoins, earnedGems };
+}
+
+function showPop(text, isGem) {
+  const el = document.createElement('div');
+  el.className = 'coin-pop ' + (isGem ? 'gem-pop' : 'coin-pop-c');
+  el.textContent = text;
+  const rect = canvas.getBoundingClientRect();
+  el.style.left = (rect.left + rect.width / 2 - 25) + 'px';
+  el.style.top  = (rect.top  + rect.height / 2 + (isGem ? -20 : 0)) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1300);
+}
+
+// ========== CHAR & LEVEL SELECT ==========
+function renderLevelGrid() {
+  ['levelGrid1','levelGrid2','levelGrid3'].forEach(id => document.getElementById(id).innerHTML = '');
+  for (let lvl = 1; lvl <= TOTAL_LEVELS; lvl++) {
+    const gridId = lvl <= 10 ? 'levelGrid1' : lvl <= 20 ? 'levelGrid2' : 'levelGrid3';
+    const cfg  = getLevelCfg(lvl);
+    const locked = lvl > bestLevel;
+    const btn = document.createElement('button');
+    btn.className = 'level-btn' + (locked ? ' locked' : '') + (lvl === selectedLevel ? ' selected' : '');
+    btn.innerHTML = `<span class="lvl-num">${lvl}</span><span class="lvl-zone">${cfg.zone}</span>`;
+    if (!locked) { btn.title = `${cfg.time}s · 豆${cfg.food}`; btn.onclick = () => selectLevel(lvl); }
+    document.getElementById(gridId).appendChild(btn);
+  }
+}
+function selectLevel(lvl) {
+  selectedLevel = lvl;
+  document.getElementById('confirmLevelNum').textContent = lvl;
+  renderLevelGrid();
+}
+function showLevelSelect() {
+  document.getElementById('charSelectOverlay').style.display = 'none';
+  document.getElementById('levelSelectOverlay').style.display = 'flex';
+  document.getElementById('levelCharLabel').textContent = '已选：' + selectedChar.name + ' · ' + selectedChar.skill;
+  renderLevelGrid(); selectLevel(selectedLevel);
+}
+function renderCharGrid() {
+  const grid = document.getElementById('charGrid');
+  grid.innerHTML = '';
+  CHARACTERS.forEach(ch => {
+    const card = document.createElement('div');
+    card.className = 'char-card' + (ch.id === selectedCharId ? ' selected' : '');
+    card.onclick = () => selectChar(ch.id);
+    const preview = drawCharPreview(ch);
+    card.innerHTML = `<div class="char-name">${ch.name}</div><div class="char-skill">${ch.skill}</div><div class="char-desc">${ch.desc}</div>`;
+    card.insertBefore(preview, card.firstChild);
+    grid.appendChild(card);
+  });
+}
+function drawCharPreview(ch) {
+  const c = document.createElement('canvas');
+  c.width = 70; c.height = 70; c.className = 'char-preview';
+  const cx = c.getContext('2d');
+  const cell = 14;
+  const segs = [{x:2,y:2},{x:1,y:2},{x:0,y:2},{x:0,y:3},{x:0,y:4}];
+  segs.forEach((seg, i) => {
+    const isHead = i === 0;
+    cx.fillStyle = isHead ? ch.headColor : ch.bodyColor + Math.max(0.35, 1-i/segs.length*0.65) + ')';
+    cx.beginPath(); roundRectPath(cx, seg.x*cell+1, seg.y*cell+1, cell-2, cell-2, 3); cx.fill();
+    if (isHead) {
+      cx.fillStyle = ch.eyeColor;
+      cx.beginPath(); cx.arc(seg.x*cell+cell*0.35, seg.y*cell+cell*0.38, cell*0.12, 0, Math.PI*2); cx.fill();
+      cx.beginPath(); cx.arc(seg.x*cell+cell*0.65, seg.y*cell+cell*0.38, cell*0.12, 0, Math.PI*2); cx.fill();
+    }
+  });
+  cx.beginPath(); cx.arc(4*cell+cell/2, 1*cell+cell/2, cell*0.32, 0, Math.PI*2);
+  cx.fillStyle = '#85B7EB'; cx.fill();
+  drawPowerupShape(cx, 4*cell+cell/2, 3*cell+cell/2, cell*0.35, getPuTypeForChar(ch.id), 1);
+  return c;
+}
+function getPuTypeForChar(charId) {
+  return { blue:'time', red:'speed', green:'shield', gold:'score' }[charId] || 'time';
+}
+function selectChar(id) {
+  selectedCharId = id;
+  selectedChar   = CHARACTERS.find(c => c.id === id);
+  renderCharGrid();
+}
+function confirmCharacter() { showLevelSelect(); }
+function goBackToChar() {
+  document.getElementById('levelSelectOverlay').style.display = 'none';
+  document.getElementById('charSelectOverlay').style.display = 'flex';
+}
+function showCharSelect() {
+  renderCharGrid(); updateWallet();
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('levelSelectOverlay').style.display = 'none';
+  document.getElementById('charSelectOverlay').style.display = 'flex';
+}
+function startFromLevelSelect() {
+  document.getElementById('levelSelectOverlay').style.display = 'none';
+  document.getElementById('overlay').style.display = 'none';
+  startGame();
+}
+
+// ========== GAME LOGIC ==========
+function rnd(max) { return Math.floor(Math.random() * max); }
+
+function initGame() {
+  const cfg = getLevelCfg(currentLevel);
+  snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+  dir = {x:1,y:0}; nextDir = {x:1,y:0};
+  score = 0; timeLeft = cfg.time;
+  totalFood = cfg.food;
+  obstacles = []; foods = []; powerups = [];
+  activeEffects = { speed:0, shield:0, score:0 };
+  puSpawnTimer = 0; extraLifeThisGame = false;
+
+  // Apply inventory
+  if (inventory['extra-life'])   { extraLifeThisGame = true; inventory['extra-life']--;   saveAll(); }
+  if (inventory['extra-time'])   { timeLeft = Math.min(timeLeft + 15, cfg.time + 30); inventory['extra-time']--;  saveAll(); }
+  if (inventory['start-shield']) { activeEffects.shield = 3; inventory['start-shield']--; saveAll(); }
+  if (inventory['start-speed'])  { activeEffects.speed  = 5; inventory['start-speed']--;  saveAll(); }
+  if (inventory['start-score'])  { activeEffects.score  = 8; inventory['start-score']--;  saveAll(); }
+
+  // Sync equipped skin
+  activeSkin = SKINS.find(s => s.id === equippedSkin) || SKINS[0];
+
+  for (let i = 0; i < cfg.obstacles; i++) {
+    let pos; do { pos = {x:rnd(COLS),y:rnd(ROWS)}; } while (isTaken(pos.x,pos.y,true));
+    obstacles.push(pos);
+  }
+  for (let i = 0; i < cfg.food; i++) spawnFood();
+  spawnPowerup(true);
+  updateHUD(); updatePowerupStrip();
+}
+
+function isOnEdge(x, y) { return x===0 || x===COLS-1 || y===0 || y===ROWS-1; }
+function isTaken(x, y, forObs = false) {
+  if (snake.some(s => s.x===x && s.y===y)) return true;
+  if (!forObs && obstacles.some(o => o.x===x && o.y===y)) return true;
+  if (foods.some(f => f.x===x && f.y===y)) return true;
+  if (powerups.some(p => p.x===x && p.y===y)) return true;
+  return false;
+}
+function spawnFood() {
+  if (foods.length >= totalFood) return;
+  let pos, t = 0;
+  do { pos = {x:rnd(COLS),y:rnd(ROWS)}; t++; }
+  while ((isTaken(pos.x,pos.y) || isOnEdge(pos.x,pos.y)) && t < 300);
+  if (t < 300) foods.push(pos);
+}
+function spawnPowerup(force = false) {
+  if (!force && powerups.length > 0) return;
+  if (powerups.length >= 2) return;
+  let pool = [...PU_TYPES, getPuTypeForChar(selectedCharId)];
+  const type = pool[rnd(pool.length)];
+  let pos, t = 0;
+  do { pos = {x:rnd(COLS),y:rnd(ROWS)}; t++; }
+  while ((isTaken(pos.x,pos.y) || isOnEdge(pos.x,pos.y)) && t < 300);
+  if (t < 300) powerups.push({ x:pos.x, y:pos.y, type, ttl:200 });
+}
+
+function startGame() {
+  currentLevel = selectedLevel;
+  clearInterval(gameLoop); clearInterval(timerLoop); clearInterval(effectTimer);
+  gameRunning = true; gamePaused = false;
+  initGame(); draw();
+  const cfg = getLevelCfg(currentLevel);
+  const baseSpeed = Math.round(cfg.speed * selectedChar.speed);
+
+  gameLoop = setInterval(() => {
+    if (!gameRunning || gamePaused) return;
+    step();
+    puSpawnTimer++;
+    if (puSpawnTimer >= Math.max(40, 80 - currentLevel * 2)) { puSpawnTimer = 0; spawnPowerup(); }
+    powerups = powerups.filter(p => { p.ttl--; return p.ttl > 0; });
+  }, baseSpeed);
+
+  timerLoop = setInterval(() => {
+    if (!gamePaused && gameRunning) { timeLeft--; updateHUD(); if (timeLeft <= 0) gameOver(false,'timeout'); }
+  }, 1000);
+
+  effectTimer = setInterval(() => {
+    if (!gamePaused && gameRunning) {
+      ['speed','shield','score'].forEach(t => { if (activeEffects[t] > 0) activeEffects[t]--; });
+      updatePowerupStrip();
+    }
+  }, 1000);
+}
+
+function pauseGame() { if (!gameRunning) return; gamePaused = !gamePaused; }
+function resetGame() {
+  clearInterval(gameLoop); clearInterval(timerLoop); clearInterval(effectTimer);
+  gameRunning = false; gamePaused = false;
+  initGame(); draw(); updateWallet(); showCharSelect();
+}
+function setDir(dx, dy) {
+  if (!gameRunning || gamePaused) return;
+  if (dx !== 0 && dir.x !== 0) return;
+  if (dy !== 0 && dir.y !== 0) return;
+  nextDir = {x:dx,y:dy};
+}
+
+function step() {
+  dir = nextDir;
+  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+  if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+    if (activeEffects.shield > 0) { head.x = (head.x+COLS)%COLS; head.y = (head.y+ROWS)%ROWS; }
+    else if (extraLifeThisGame)   { extraLifeThisGame = false; nextDir = {x:-dir.x,y:-dir.y}; return; }
+    else return gameOver(false,'wall');
+  }
+  if (snake.some(s => s.x===head.x && s.y===head.y)) {
+    if (activeEffects.shield > 0) {}
+    else if (extraLifeThisGame) { extraLifeThisGame = false; nextDir = {x:-dir.x,y:-dir.y}; return; }
+    else return gameOver(false,'self');
+  }
+  if (obstacles.some(o => o.x===head.x && o.y===head.y)) {
+    if (activeEffects.shield > 0) {}
+    else if (extraLifeThisGame) { extraLifeThisGame = false; nextDir = {x:-dir.x,y:-dir.y}; return; }
+    else return gameOver(false,'obstacle');
+  }
+
+  snake.unshift(head);
+  const fi = foods.findIndex(f => f.x===head.x && f.y===head.y);
+  if (fi !== -1) {
+    foods.splice(fi, 1);
+    let pts = selectedChar.id === 'gold' ? 15 : 10;
+    if (activeEffects.score > 0) pts *= 2;
+    score += pts;
+    if (foods.length === 0) return gameOver(true);
+  } else { snake.pop(); }
+
+  const pi = powerups.findIndex(p => p.x===head.x && p.y===head.y);
+  if (pi !== -1) applyPowerup(powerups.splice(pi,1)[0].type);
+
+  updateHUD(); draw();
+}
+
+function applyPowerup(type) {
+  const def = POWERUP_DEFS[type];
+  if (type === 'time') {
+    const cfg = getLevelCfg(currentLevel);
+    timeLeft = Math.min(timeLeft + 15, cfg.time + 30);
+    showFloatMsg('+15秒!', def.color);
+  } else if (type === 'speed') {
+    activeEffects.speed = def.duration;
+    const cfg = getLevelCfg(currentLevel);
+    const boosted = Math.round(cfg.speed * selectedChar.speed * 0.55);
+    const normal  = Math.round(cfg.speed * selectedChar.speed);
+    clearInterval(gameLoop);
+    gameLoop = setInterval(() => {
+      if (!gameRunning || gamePaused) return;
+      step();
+      puSpawnTimer++;
+      if (puSpawnTimer >= Math.max(40, 80 - currentLevel * 2)) { puSpawnTimer = 0; spawnPowerup(); }
+      powerups = powerups.filter(p => { p.ttl--; return p.ttl > 0; });
+    }, boosted);
+    setTimeout(() => {
+      if (!gameRunning) return;
+      clearInterval(gameLoop);
+      gameLoop = setInterval(() => {
+        if (!gameRunning || gamePaused) return;
+        step();
+        puSpawnTimer++;
+        if (puSpawnTimer >= Math.max(40, 80 - currentLevel * 2)) { puSpawnTimer = 0; spawnPowerup(); }
+        powerups = powerups.filter(p => { p.ttl--; return p.ttl > 0; });
+      }, normal);
+    }, def.duration * 1000);
+    showFloatMsg('急速!', def.color);
+  } else if (type === 'shield') {
+    activeEffects.shield = def.duration; showFloatMsg('护盾!', def.color);
+  } else if (type === 'score') {
+    activeEffects.score = def.duration; showFloatMsg('双倍得分!', def.color);
+  }
+  updatePowerupStrip();
+}
+
+function showFloatMsg(msg, color) {
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    font-size:22px;font-weight:500;color:${color};
+    background:rgba(4,44,83,0.85);padding:7px 18px;border-radius:10px;
+    pointer-events:none;z-index:50;transition:all 0.8s;`;
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.top='40%'; }, 100);
+  setTimeout(() => el.remove(), 900);
+}
+
+function gameOver(win, reason) {
+  clearInterval(gameLoop); clearInterval(timerLoop); clearInterval(effectTimer);
+  gameRunning = false;
+  const cfg = getLevelCfg(currentLevel);
+  setTimeout(() => {
+    if (win) {
+      const { earnedCoins, earnedGems } = awardWin(currentLevel);
+      if (currentLevel > bestLevel) { bestLevel = currentLevel; updateHUD(); }
+      const isLast = currentLevel === TOTAL_LEVELS;
+      const title  = isLast ? '🏆 全部通关！' : '🎉 过关！';
+      const msg    = isLast
+        ? `恭喜完成全部 <b>30</b> 关！总得分：<b>${score}</b>`
+        : `第 <b>${currentLevel}</b> 关完成！用时 <b>${cfg.time - timeLeft}</b> 秒<br>得分：<b>${score}</b><br>+${earnedCoins}🪙 +${earnedGems}💎`;
+      showWinResult(title, msg, isLast);
+    } else {
+      const reasons = { timeout:'时间耗尽', wall:'撞墙', self:'咬到自己', obstacle:'撞障碍' };
+      showLoseResult('💥 ' + (reasons[reason] || '失败') + '！',
+        `第 <b>${currentLevel}</b> 关失败 · 剩余 <b>${foods.length}</b> 豆子<br>得分：<b>${score}</b>`);
+    }
+  }, 300);
+}
+
+function showWinResult(title, msg, isLast) {
+  const ov = document.getElementById('overlay'); ov.style.display = 'flex';
+  document.getElementById('ovTitle').textContent = title;
+  document.getElementById('ovTitle').className = 'overlay-title win-title';
+  document.getElementById('ovMsg').innerHTML = msg;
+  document.getElementById('ovScore').innerHTML = `最高关卡：第 ${bestLevel} 关`;
+  document.querySelector('.overlay-btns').innerHTML = isLast
+    ? `<button class="ctrl-btn primary" onclick="restartFromLevel1()">重玩第1关</button>
+       <button class="ctrl-btn" onclick="showCharSelect()">换角色</button>`
+    : `<button class="ctrl-btn primary" onclick="nextLevel()">下一关（第${currentLevel+1}关）</button>
+       <button class="ctrl-btn" onclick="showCharSelect()">重新开始</button>`;
+}
+function showLoseResult(title, msg) {
+  const ov = document.getElementById('overlay'); ov.style.display = 'flex';
+  document.getElementById('ovTitle').textContent = title;
+  document.getElementById('ovTitle').className = 'overlay-title lose-title';
+  document.getElementById('ovMsg').innerHTML = msg;
+  document.getElementById('ovScore').innerHTML = `最高关卡：第 ${bestLevel} 关`;
+  document.querySelector('.overlay-btns').innerHTML = `
+    <button class="ctrl-btn primary" onclick="startGame()">重试第${currentLevel}关</button>
+    <button class="ctrl-btn" onclick="showCharSelect()">换关卡</button>`;
+}
+function nextLevel()         { selectedLevel = Math.min(currentLevel+1, TOTAL_LEVELS); startGame(); }
+function restartFromLevel1() { selectedLevel = 1; startGame(); }
+
+// ========== HUD ==========
+function updateHUD() {
+  const cfg = getLevelCfg(currentLevel);
+  document.getElementById('levelVal').textContent = currentLevel;
+  document.getElementById('scoreVal').textContent = score || 0;
+  const tv = document.getElementById('timeVal');
+  tv.textContent = timeLeft !== undefined ? timeLeft : cfg.time;
+  tv.className = 'hud-value' + (timeLeft <= Math.round(cfg.time * 0.2) ? ' danger' : '');
+  document.getElementById('foodVal').textContent = foods ? foods.length : cfg.food;
+  document.getElementById('bestLevelVal').textContent = bestLevel;
+  const pct = timeLeft !== undefined ? (timeLeft / cfg.time * 100) : 100;
+  const bar = document.getElementById('timeBar');
+  bar.style.width = Math.min(100, pct) + '%';
+  bar.style.background = pct > 40 ? '#378ADD' : pct > 20 ? '#EF9F27' : '#E24B4A';
+  const lvlPct = (foods && totalFood) ? ((totalFood - foods.length) / totalFood * 100) : 0;
+  document.getElementById('lvlBar').style.width = lvlPct + '%';
+}
+function updatePowerupStrip() {
+  const strip = document.getElementById('powerupStrip');
+  strip.innerHTML = '';
+  ['speed','shield','score'].forEach(t => {
+    if (activeEffects[t] > 0) {
+      const def = POWERUP_DEFS[t];
+      const tag = document.createElement('div');
+      tag.className = 'powerup-tag ' + t;
+      tag.innerHTML = `<div class="powerup-dot"></div>${def.label} ${activeEffects[t]}s`;
+      strip.appendChild(tag);
+    }
+  });
+}
+
+// ========== DRAWING ==========
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const W = canvas.width, H = canvas.height;
+  const cw = W/COLS, ch = H/ROWS;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(24,95,165,0.25)'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= COLS; i++) { ctx.beginPath(); ctx.moveTo(i*cw,0); ctx.lineTo(i*cw,H); ctx.stroke(); }
+  for (let j = 0; j <= ROWS; j++) { ctx.beginPath(); ctx.moveTo(0,j*ch); ctx.lineTo(W,j*ch); ctx.stroke(); }
+
+  // Shield border
+  if (activeEffects.shield > 0) {
+    ctx.strokeStyle = 'rgba(151,196,89,0.6)'; ctx.lineWidth = 3;
+    ctx.strokeRect(2, 2, W-4, H-4);
+  }
+
+  // Obstacles
+  obstacles.forEach(o => {
+    ctx.fillStyle = '#185FA5'; ctx.fillRect(o.x*cw+1, o.y*ch+1, cw-2, ch-2);
+    ctx.fillStyle = '#0C447C'; ctx.fillRect(o.x*cw+5, o.y*ch+5, cw-10, ch-10);
+  });
+
+  // Food
+  foods.forEach(f => {
+    const cx2 = f.x*cw+cw/2, cy2 = f.y*ch+ch/2, r = cw*0.32;
+    ctx.beginPath(); ctx.arc(cx2, cy2, r, 0, Math.PI*2);
+    ctx.fillStyle = activeEffects.score > 0 ? '#EF9F27' : '#85B7EB'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx2-r*0.3, cy2-r*0.3, r*0.25, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fill();
+  });
+
+  // Power-up boxes
+  powerups.forEach(p => {
+    const def = POWERUP_DEFS[p.type];
+    const px = p.x*cw, py = p.y*ch;
+    const bw = cw-2, bh = ch-2, bx = px+1, by = py+1;
+    const alpha = p.ttl < 40 ? p.ttl/40 : 1;
+    ctx.save(); ctx.globalAlpha = alpha;
+    const pulse = 0.5 + 0.5*Math.sin(Date.now()*0.006);
+    ctx.shadowColor = def.color; ctx.shadowBlur = 4 + pulse*4;
+    ctx.fillStyle = def.fill;
+    roundRectPath(ctx, bx, by, bw, bh, 4); ctx.fill();
+    ctx.strokeStyle = def.color; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.shadowBlur = 0;
+    const rc = Math.min(bw,bh)*0.18;
+    ctx.strokeStyle = def.color; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(bx+bw/2, by+rc); ctx.lineTo(bx+bw/2, by+bh-rc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx+rc, by+bh/2); ctx.lineTo(bx+bw-rc, by+bh/2); ctx.stroke();
+    drawPowerupShape(ctx, px+cw/2, py+ch/2, cw*0.22, p.type, alpha);
+    ctx.globalAlpha = 1; ctx.restore();
+  });
+
+  // Snake (using equipped skin)
+  snake.forEach((seg, i) => {
+    const isHead = i === 0;
+    const x = seg.x*cw+1, y = seg.y*ch+1, w = cw-2, h = ch-2;
+    ctx.fillStyle = isHead
+      ? activeSkin.headColor
+      : activeSkin.bodyColor + Math.max(0.35, 1-i/snake.length*0.65) + ')';
+    roundRectPath(ctx, x, y, w, h, isHead ? 5 : 3); ctx.fill();
+
+    // Speed trail
+    if (activeEffects.speed > 0 && i < 4 && !isHead) {
+      ctx.fillStyle = 'rgba(240,153,123,0.18)';
+      roundRectPath(ctx, x-2, y-2, w+4, h+4, 5); ctx.fill();
+    }
+    if (isHead) {
+      const eyeR = cw*0.09;
+      const ex1 = seg.x*cw+cw*0.35+dir.y*cw*0.15;
+      const ey1 = seg.y*ch+ch*0.35+dir.x*ch*0.15;
+      const ex2 = seg.x*cw+cw*0.65+dir.y*cw*0.15;
+      const ey2 = seg.y*ch+ch*0.65+dir.x*ch*0.15;
+      ctx.fillStyle = activeSkin.eyeColor;
+      ctx.beginPath(); ctx.arc(ex1+dir.x*cw*0.1, ey1+dir.y*ch*0.1, eyeR, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ex2+dir.x*cw*0.1, ey2+dir.y*ch*0.1, eyeR, 0, Math.PI*2); ctx.fill();
+    }
+  });
+}
+
+function drawPowerupShape(ctx2, cx, cy, r, type, alpha=1) {
+  ctx2.save(); ctx2.translate(cx, cy);
+  if (type === 'time') {
+    ctx2.strokeStyle = '#85B7EB'; ctx2.lineWidth = 1.5;
+    ctx2.beginPath(); ctx2.arc(0, 0, r, 0, Math.PI*2); ctx2.stroke();
+    ctx2.beginPath(); ctx2.moveTo(0,-r*0.9); ctx2.lineTo(0,0); ctx2.lineTo(r*0.5,r*0.3); ctx2.stroke();
+  } else if (type === 'speed') {
+    ctx2.fillStyle = '#F0997B';
+    ctx2.beginPath();
+    ctx2.moveTo(r*0.2,-r); ctx2.lineTo(-r*0.3,0); ctx2.lineTo(0.05*r,0);
+    ctx2.lineTo(-r*0.2,r); ctx2.lineTo(r*0.3,0); ctx2.lineTo(0,0); ctx2.closePath(); ctx2.fill();
+  } else if (type === 'shield') {
+    ctx2.fillStyle = '#97C459';
+    ctx2.beginPath(); ctx2.moveTo(0,-r);
+    ctx2.bezierCurveTo(r,-r,r,0,0,r); ctx2.bezierCurveTo(-r,0,-r,-r,0,-r); ctx2.fill();
+  } else if (type === 'score') {
+    ctx2.fillStyle = '#EF9F27'; ctx2.beginPath();
+    for (let k = 0; k < 5; k++) {
+      const oa = k*4*Math.PI/5-Math.PI/2, ia = oa+Math.PI/5;
+      k === 0 ? ctx2.moveTo(Math.cos(oa)*r, Math.sin(oa)*r) : ctx2.lineTo(Math.cos(oa)*r, Math.sin(oa)*r);
+      ctx2.lineTo(Math.cos(ia)*r*0.45, Math.sin(ia)*r*0.45);
+    }
+    ctx2.closePath(); ctx2.fill();
+  }
+  ctx2.restore();
+}
+
+function roundRectPath(ctx2, x, y, w, h, r) {
+  ctx2.beginPath();
+  ctx2.moveTo(x+r,y); ctx2.lineTo(x+w-r,y);
+  ctx2.arcTo(x+w,y,x+w,y+r,r); ctx2.lineTo(x+w,y+h-r);
+  ctx2.arcTo(x+w,y+h,x+w-r,y+h,r); ctx2.lineTo(x+r,y+h);
+  ctx2.arcTo(x,y+h,x,y+h-r,r); ctx2.lineTo(x,y+r);
+  ctx2.arcTo(x,y,x+r,y,r); ctx2.closePath();
+}
+
+// ========== KEYBOARD ==========
+document.addEventListener('keydown', e => {
+  switch (e.key) {
+    case 'ArrowUp':   case 'w': case 'W': setDir(0,-1); e.preventDefault(); break;
+    case 'ArrowDown': case 's': case 'S': setDir(0,1);  e.preventDefault(); break;
+    case 'ArrowLeft': case 'a': case 'A': setDir(-1,0); e.preventDefault(); break;
+    case 'ArrowRight':case 'd': case 'D': setDir(1,0);  e.preventDefault(); break;
+    case ' ': pauseGame(); e.preventDefault(); break;
+  }
+});
+
+// ========== INIT ==========
+updateWallet();
+initGame(); draw();
+showCharSelect();
+</script>
+</body>
+</html>
