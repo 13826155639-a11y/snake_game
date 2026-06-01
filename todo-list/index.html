@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>待办事项清单 - To-Do List</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📝 我的待办事项</h1>
+            <p class="subtitle">My To-Do List</p>
+        </header>
+
+        <main>
+            <!-- Input Section -->
+            <div class="input-section">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="todoInput" 
+                        placeholder="添加一个新的待办事项..."
+                        autocomplete="off"
+                    >
+                    <button id="addBtn" class="add-btn">
+                        <span>➕</span> 添加
+                    </button>
+                </div>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">全部</button>
+                    <button class="filter-btn" data-filter="active">未完成</button>
+                    <button class="filter-btn" data-filter="completed">已完成</button>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">总计:</span>
+                    <span class="stat-value" id="totalCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">已完成:</span>
+                    <span class="stat-value completed" id="completedCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">未完成:</span>
+                    <span class="stat-value active" id="activeCount">0</span>
+                </div>
+            </div>
+
+            <!-- Todo List -->
+            <div class="todo-container">
+                <ul id="todoList" class="todo-list">
+                    <!-- Todos will be added here dynamically -->
+                </ul>
+                <div id="emptyState" class="empty-state">
+                    <p>🎉 太棒了！没有待办事项</p>
+                    <p class="empty-subtitle">开始添加新任务吧</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button id="clearCompletedBtn" class="action-btn clear-btn">
+                    🗑️ 清除已完成
+                </button>
+                <button id="clearAllBtn" class="action-btn danger-btn">
+                    ⚠️ 清除全部
+                </button>
+            </div>
+        </main>
+
+        <footer>
+            <p>💾 数据已自动保存到本地存储</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
